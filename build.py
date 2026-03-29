@@ -39,9 +39,9 @@ def export_onnx(model, out_path: str):
     print(f"[2/4] exporting ONNX → {out_path}")
     model.export(out_path, check_trace=False, onnx_opset_version=17)
 
-    # Verify
-    m = onnx.load(out_path)
-    onnx.checker.check_model(m)
+    # Verify (model >2GB — must pass path, not loaded object)
+    onnx.checker.check_model(out_path)
+    m = onnx.load(out_path, load_external_data=False)
     inputs  = [i.name for i in m.graph.input]
     outputs = [o.name for o in m.graph.output]
     print(f"      inputs : {inputs}")
