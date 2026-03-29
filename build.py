@@ -69,7 +69,9 @@ def export_onnx(model, out_path: str):
 
 def quantize_int8(src: str, dst: str):
     print(f"[3/4] quantizing int8 → {dst}")
-    quantize_dynamic(src, dst, weight_type=QuantType.QInt8)
+    # skip Conv — quantize_dynamic maps Conv→ConvInteger which ORT CPU EP dropped
+    quantize_dynamic(src, dst, weight_type=QuantType.QInt8,
+                     op_types_to_quantize=["MatMul", "Gather"])
 
 
 def export_tokens(model, out_path: str):

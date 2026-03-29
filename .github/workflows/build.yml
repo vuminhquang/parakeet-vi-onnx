@@ -20,7 +20,7 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: export onnx
-        run: python build.py --out-dir ./output --skip-fp32
+        run: python build.py --out-dir ./output
         env:
           HF_HOME: /tmp/hf_cache
 
