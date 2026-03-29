@@ -36,52 +36,35 @@ def load_nemo_model(model_id: str):
     return model
 
 
-class _EncoderDecoder(torch.nn.Module):
-    """Encoder + CTC decoder, input = mel features (sherpa-onnx compatible)."""
-    def __init__(self, encoder, decoder):
-        super().__init__()
-        self.encoder = encoder
-        self.decoder = decoder
-
-    def forward(self, audio_signal: torch.Tensor, length: torch.Tensor):
-        encoded, encoded_len = self.encoder(audio_signal=audio_signal, length=length)
-        logprobs = self.decoder(encoder_output=encoded)
-        return logprobs
-
-
 def export_onnx(model, out_path: str):
+    """Export encoder+decoder only using NeMo's native export with mel input_example.
+
+    Passing input_example as mel features (not raw audio) causes NeMo to skip
+    the preprocessor in the ONNX graph — exactly what sherpa-onnx expects.
+    opset_version=13 ensures broad ONNX Runtime compatibility.
+    """
     print(f"[2/4] exporting encoder+decoder ONNX → {out_path}")
 
-    feat_dim = model.cfg.preprocessor.features  # typically 80
-    T = 256  # dummy time steps (dynamic)
-    dummy_features = torch.zeros(1, feat_dim, T)
-    dummy_length   = torch.tensor([T], dtype=torch.int64)
+    feat_dim = model.cfg.preprocessor.features  # 80 for Parakeet
+    T = 256
+    input_example = (
+        torch.zeros(1, feat_dim, T, dtype=torch.float32),  # [B, D, T] mel features
+        torch.tensor([T], dtype=torch.int64),
+    )
 
-    wrapper = _EncoderDecoder(model.encoder, model.decoder)
-    wrapper.eval()
-
-    with torch.no_grad():
-        torch.onnx.export(
-            wrapper,
-            (dummy_features, dummy_length),
-            out_path,
-            input_names  = ["audio_signal", "length"],
-            output_names = ["logprobs"],
-            dynamic_axes = {
-                "audio_signal": {0: "N", 2: "T"},
-                "length":       {0: "N"},
-                "logprobs":     {0: "N", 1: "T"},
-            },
-            opset_version       = 17,
-            do_constant_folding = True,
-        )
+    model.export(
+        out_path,
+        input_example   = input_example,
+        check_trace     = False,
+        onnx_opset_version = 13,
+    )
 
     # verify
     onnx.checker.check_model(out_path)
     m = onnx.load(out_path, load_external_data=False)
     print(f"      inputs : {[i.name for i in m.graph.input]}")
     print(f"      outputs: {[o.name for o in m.graph.output]}")
-    print(f"      feat_dim used: {feat_dim}")
+    print(f"      feat_dim: {feat_dim}")
 
 
 def quantize_int8(src: str, dst: str):
