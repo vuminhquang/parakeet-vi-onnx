@@ -37,7 +37,7 @@ def load_nemo_model(model_id: str):
 
 def export_onnx(model, out_path: str):
     print(f"[2/4] exporting ONNX → {out_path}")
-    model.export(out_path, check_trace=False)
+    model.export(out_path, check_trace=False, onnx_opset_version=17)
 
     # Verify
     m = onnx.load(out_path)
