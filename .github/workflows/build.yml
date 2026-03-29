@@ -1,0 +1,32 @@
+name: build-parakeet-vi-onnx
+
+on:
+  workflow_dispatch:   # manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: install deps
+        run: pip install -r requirements.txt
+
+      - name: export onnx
+        run: python build.py --out-dir ./output --skip-fp32
+        env:
+          HF_HOME: /tmp/hf_cache
+
+      - name: upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: parakeet-vi-onnx
+          path: output/
+          retention-days: 30

@@ -1,0 +1,6 @@
+nemo_toolkit[asr]==2.2.0
+onnx>=1.16.0
+onnxruntime>=1.19.0
+onnxruntime-tools>=1.7.0
+torch>=2.1.0
+huggingface_hub>=0.24.0
